@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>手术器械监测系统（修复登录问题）</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <style>
+    /* 全局样式保持不变 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Microsoft YaHei', Arial, sans-serif;
+    }
+
+    body {
+      background-color: #e6f7ff;
+      color: #333;
+      min-height: 100vh;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+
+    .loader-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #e6f7ff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease;
+    }
+
+    .loader {
+      width: 60px;
+      height: 60px;
+      border: 5px solid #b3e0ff;
+      border-top: 5px solid #1890ff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loader-text {
+      font-size: 18px;
+      color: #1890ff;
+    }
+
+    .network-error {
+      color: #ff4d4f;
+      font-size: 16px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .network-error.show {
+      display: block;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      padding: 30px;
+      display: none;
+    }
+
+    .container.active {
+      display: block;
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1, h2, h3 {
+      color: #1890ff;
+      margin-bottom: 25px;
+      font-weight: 600;
+    }
+
+    h1 {
+      font-size: 28px;
+      text-align: center;
+      margin: 30px 0;
+    }
+
+    h2 {
+      font-size: 24px;
+      border-bottom: 2px solid #e8f4f8;
+      padding-bottom: 10px;
+    }
+
+    h3 {
+      font-size: 20px;
+      margin: 30px 0 15px;
+    }
+
+    button {
+      background-color: #1890ff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.2s ease;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+
+    button:hover {
+      background-color: #096dd9;
+    }
+
+    button:disabled {
+      background-color: #a0aec0;
+      cursor: not-allowed;
+    }
+
+    .btn-block {
+      width: 100%;
+      margin-right: 0;
+      padding: 12px;
+      font-size: 17px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    input[type="tel"],
+    input[type="number"],
+    input[type="email"],
+    input[type="file"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #d9d9d9;
+      border-radius: 4px;
+      font-size: 16px;
+      transition: border 0.2s ease;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #1890ff;
+    }
+
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .modal-overlay.active,
+    .modal-overlay.native-show {
+      display: flex !important;
+    }
+
+    .modal {
+      background-color: white;
+      width: 90%;
+      max-width: 500px;
+      border-radius: 8px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+      padding: 30px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 15px;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1890ff;
+    }
+
+    .close-btn {
+      background: none;
+      color: #999;
+      font-size: 20px;
+      cursor: pointer;
+      border: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .close-btn:hover {
+      background: none;
+      color: #ff4d4f;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #eee;
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 12px;
+      text-align: center;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      font-weight: 500;
+    }
+
+    .tab.active {
+      border-bottom-color: #1890ff;
+      color: #1890ff;
+    }
+
+    .agreement-container {
+      height: 350px;
+      overflow-y: auto;
+      border: 1px solid #d9d9d9;
+      border-radius: 4px;
+      padding: 20px;
+      margin: 20px 0;
+      background-color: #f8f9fa;
+      line-height: 1.8;
+    }
+
+    .agreement-container p {
+      margin-bottom: 15px;
+      text-align: justify;
+    }
+
+    .agreement-container strong {
+      color: #1890ff;
+    }
+
+    .agreement-checkbox {
+      margin: 20px 0;
+      font-size: 16px;
+    }
+
+    .session-list {
+      margin: 20px 0;
+    }
+
+    .session-item {
+      padding: 15px;
+      border: 1px solid #e8f4f8;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .session-info {
+      flex: 1;
+    }
+
+    .session-meta {
+      color: #666;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+
+    .video-container {
+      border: 1px solid #d9d9d9;
+      width: 100%;
+      height: 450px;
+      margin: 20px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f8f9fa;
+      cursor: pointer;
+      position: relative;
+      z-index: 10;
+    }
+
+    .video-container:hover {
+      background-color: #f0f7ff;
+    }
+
+    .video-status {
+      text-align: center;
+      padding: 0 20px;
+    }
+
+    .loading-indicator {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #b3e0ff;
+      border-top: 4px solid #1890ff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+      display: none;
+    }
+
+    .loading-indicator.active {
+      display: block;
+    }
+
+    .control-bar {
+      margin: 20px 0;
+    }
+
+    .safety-status {
+      margin: 15px 0;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .warning-list {
+      margin: 15px 0;
+    }
+
+    .warning-item {
+      padding: 12px;
+      border-left: 3px solid #faad14;
+      background-color: #fffbe6;
+      margin-bottom: 10px;
+      border-radius: 0 4px 4px 0;
+    }
+
+    .warning-item.red {
+      border-left-color: #ff4d4f;
+      background-color: #fff2f0;
+    }
+
+    .warning-header {
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .warning-time {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    .report-summary {
+      background-color: #f0f8fb;
+      padding: 20px;
+      border-radius: 4px;
+      margin: 20px 0;
+    }
+
+    .report-summary p {
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e8f4f8;
+    }
+
+    th {
+      background-color: #f0f8fb;
+      font-weight: 600;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+      background-color: #f8f9fa;
+      border-radius: 4px;
+      margin: 20px 0;
+    }
+
+    .file-upload-area {
+      border: 2px dashed #1890ff;
+      border-radius: 6px;
+      padding: 30px;
+      text-align: center;
+      margin: 20px 0;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .file-upload-area:hover {
+      background-color: #f0f7ff;
+    }
+
+    .file-upload-icon {
+      font-size: 40px;
+      color: #1890ff;
+      margin-bottom: 15px;
+    }
+
+    .action-modal .modal {
+      max-width: 400px;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .action-buttons button {
+      flex: 1;
+      padding: 12px;
+    }
+
+    #nativeVideoPlayer {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: none;
+    }
+
+    #nativeVideoPlayer.native-active {
+      display: block !important;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      .video-container {
+        height: 300px;
+      }
+
+      .agreement-container {
+        height: 250px;
+      }
+
+      .session-item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .session-item button {
+        margin-top: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="loader-container" id="loader">
+    <div class="loader"></div>
+    <div class="loader-text">系统初始化中，请耐心等候...</div>
+    <div class="network-error" id="networkError">网络连接异常，请检查网络后重试</div>
+  </div>
+
+  <div id="app" class="container">
+    <!-- 分析工作台 -->
+    <div v-if="currentView === 'analysisWorkspace'">
+      <h2>分析工作台 - {{ currentSession.name }}</h2>
+
+      <div class="control-bar">
+        <button onclick="nativeTogglePlay()">
+          <span id="playText">播放</span>
+        </button>
+        <button onclick="nativeStopPlay()" id="stopBtn" disabled>停止</button>
+        <button onclick="nativeToggleRecording()" id="recordBtn" disabled>
+          <span id="recordText">开始录制</span>
+        </button>
+        <button onclick="nativeTakeScreenshot()" id="screenshotBtn" disabled>截图</button>
+        <button onclick="nativeShowSourceModal()">选择视频来源</button>
+      </div>
+
+      <div class="safety-status">
+        安全状态: <span :style="{ color: safetyLevel === 'green' ? 'green' : safetyLevel === 'yellow' ? 'orange' : 'red' }">
+          {{ safetyText }}
+        </span>
+      </div>
+
+      <div class="video-container" onclick="nativeShowSourceModal()">
+        <div class="video-status" id="videoStatus">
+          <div class="loading-indicator" id="loadingIndicator"></div>
+          <div id="statusText">点击此处选择视频来源</div>
+        </div>
+        
+        <video 
+          id="nativeVideoPlayer" 
+          controls
+          onloadedmetadata="nativeOnVideoLoaded()"
+          onerror="nativeHandleVideoError()"
+        ></video>
+      </div>
+
+      <h3>实时识别（8类器械）</h3>
+      <p>已识别器械：{{ recognizedInstruments.join(', ') || '暂无识别结果，等待视频播放' }}</p>
+
+      <h3>安全预警 ({{ activeWarnings.length }})</h3>
+      <div v-if="activeWarnings.length === 0" class="empty-state">
+        <p>一切正常，无活跃预警</p>
+      </div>
+      <div class="warning-list">
+        <div v-for="(warning, index) in activeWarnings" :key="index" class="warning-item" :class="warning.type">
+          <div class="warning-header">{{ warning.title }}</div>
+          <div>{{ warning.description }}</div>
+          <div class="warning-time">{{ warning.timestamp }}</div>
+          <button @click="resolveWarning(index)" style="margin-top: 8px;">标记为已处理</button>
+        </div>
+      </div>
+
+      <h3>截图记录</h3>
+      <p>当前截图数量: <span id="screenshotCount">0</span> 张</p>
+      
+      <div style="margin: 20px 0;">
+        <button @click="goToReport" :disabled="!isReady">生成复盘报告</button>
+        <button @click="showExitModal = true">结束会话</button>
+      </div>
+    </div>
+
+    <!-- 登录页 -->
+    <div v-if="currentView === 'auth'">
+      <h1>手术器械监测系统</h1>
+      <div style="text-align: center; margin: 50px 0;">
+        <button class="btn-block" style="margin-bottom: 20px;" @click="showLoginModal = true">登录系统</button>
+        <button class="btn-block" @click="showRegisterModal = true">注册账号</button>
+      </div>
+    </div>
+
+    <!-- 欢迎页/协议页 -->
+    <div v-if="currentView === 'welcome'">
+      <h1>欢迎使用手术室器械监测系统</h1>
+      
+      <div class="agreement-container" ref="agreementRef" @scroll="checkAgreementScroll">
+        <p><strong>一、数据隐私与安全承诺</strong></p>
+        <p>1.1 本系统严格遵守相关法律法规，高度重视用户数据安全与隐私保护。</p>
+        <p>1.2 所有手术视频、器械识别数据等敏感信息均在本地设备处理和存储，不会上传至外部服务器。</p>
+        <p>1.3 系统采用本地加密存储技术，确保数据仅授权人员可访问。</p>
+        
+        <p><strong>二、系统使用规范</strong></p>
+        <p>2.1 本系统仅面向具备相应执业资格的医务人员使用。</p>
+        <p>2.2 系统功能仅作为辅助决策工具，不能完全替代医务人员的专业判断。</p>
+        <p>2.3 用户需对所有医疗行为和决策承担最终责任。</p>
+      </div>
+
+      <div class="agreement-checkbox">
+        <label>
+          <input type="checkbox" v-model="agreed" :disabled="!isAgreementScrolledToBottom"> 我已完整阅读、理解并同意上述所有条款
+        </label>
+      </div>
+
+      <button class="btn-block" :disabled="!agreed" @click="goToSessionManager">
+        同意并进入系统
+      </button>
+    </div>
+
+    <!-- 会话管理页 -->
+    <div v-if="currentView === 'sessionManager'">
+      <h2>手术复盘分析工作台</h2>
+      <p>请选择一个会话开始工作，或创建新的分析会话。</p>
+
+      <div class="file-upload-area" @click="triggerFileSelect('general')">
+        <div class="file-upload-icon">📂</div>
+        <p>点击或拖拽文件到此处上传</p>
+        <p style="color: #666; font-size: 14px; margin-top: 10px;">支持视频文件、分析报告等</p>
+      </div>
+
+      <div class="session-list">
+        <div v-if="sessions.length === 0" class="empty-state">
+          <p>暂无历史会话记录</p>
+        </div>
+
+        <div v-for="(session, index) in sessions" :key="index" class="session-item">
+          <div class="session-info">
+            <div>{{ session.name }}</div>
+            <div class="session-meta">
+              创建时间: {{ session.date }} | 分析时长: {{ session.duration }} | 预警次数: {{ session.warnings }}次
+            </div>
+          </div>
+          <button @click="openSession(index)">打开</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 报告页 -->
+    <div v-if="currentView === 'reviewReport'">
+      <h2>手术复盘分析报告</h2>
+      <div class="report-summary" ref="reportContent">
+        <p>手术名称: {{ currentSession.name }}</p>
+        <p>分析时长: {{ currentSession.duration }}</p>
+        <p>识别器械种类: {{ recognizedInstruments.length }}种（{{ recognizedInstruments.join(', ') }}）</p>
+        <p>预警统计: 总计 {{ totalWarnings }}次（红色预警: {{ redWarningCount }}次 | 黄色预警: {{ yellowWarningCount }}次）</p>
+        <p>截图数量: {{ screenshots.length }}张</p>
+      </div>
+
+      <h3>预警类型分布</h3>
+      <div class="empty-state">
+        <p>预警分布统计图表</p>
+        <p>红色预警: {{ redWarningCount }}次 | 黄色预警: {{ yellowWarningCount }}次</p>
+      </div>
+
+      <h3>识别准确率趋势</h3>
+      <div class="empty-state">
+        <p>识别准确率统计图表</p>
+      </div>
+
+      <h3>详细事件列表</h3>
+      <table ref="eventTable">
+        <thead>
+          <tr>
+            <th>时间点</th>
+            <th>事件类型</th>
+            <th>详细信息</th>
+            <th>关联截图</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(event, index) in eventList" :key="index">
+            <td>{{ event.time }}</td>
+            <td>{{ event.type }}</td>
+            <td>{{ event.details }}</td>
+            <td>{{ event.hasScreenshot ? '有' : '无' }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin: 30px 0; text-align: right;">
+        <button @click="exportPDF">导出PDF报告</button>
+        <button @click="exportCSV">导出CSV数据</button>
+        <button @click="printReport">打印报告</button>
+        <button @click="currentView = 'sessionManager'">返回会话管理</button>
+      </div>
+    </div>
+
+    <!-- 登录弹窗 -->
+    <div class="modal-overlay" :class="{ active: showLoginModal }" @click.self="showLoginModal = false">
+      <div class="modal">
+        <div class="modal-header">
+          <div class="modal-title">用户登录</div>
+          <button class="close-btn" @click="showLoginModal = false">×</button>
+        </div>
+        
+        <div class="tabs">
+          <div class="tab" :class="{ active: loginTab === 'password' }" @click="loginTab = 'password'">
+            账号密码登录
+          </div>
+          <div class="tab" :class="{ active: loginTab === 'verify' }" @click="loginTab = 'verify'">
+            验证码登录
+          </div>
+        </div>
+        
+        <div class="login-content">
+          <div v-if="loginTab === 'password'">
+            <div class="form-group">
+              <label>登录账号</label>
+              <input type="text" v-model="loginForm.username" placeholder="请输入您的登录账号">
+            </div>
+            <div class="form-group">
+              <label>登录密码</label>
+              <input type="password" v-model="loginForm.password" placeholder="请输入您的登录密码">
+            </div>
+            <button class="btn-block" @click="handlePasswordLogin">登录</button>
+          </div>
+
+          <div v-if="loginTab === 'verify'">
+            <div class="form-group">
+              <label>手机号码</label>
+              <input type="tel" v-model="verifyForm.phone" placeholder="请输入您的手机号码">
+            </div>
+            <div class="form-group" style="display: flex; gap: 10px;">
+              <div style="flex: 1;">
+                <label>验证码</label>
+                <input type="text" v-model="verifyForm.code" placeholder="请输入验证码">
+              </div>
+              <div style="display: flex; align-items: flex-end;">
+                <button :disabled="countDown > 0" @click="getVerifyCode" style="height: 44px;">
+                  {{ countDown > 0 ? `${countDown}秒后重新获取` : '获取验证码' }}
+                </button>
+              </div>
+            </div>
+            <button class="btn-block" @click="handleVerifyLogin">登录</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 注册弹窗 -->
+    <div class="modal-overlay" :class="{ active: showRegisterModal }" @click.self="showRegisterModal = false">
+      <div class="modal">
+        <div class="modal-header">
+          <div class="modal-title">用户注册</div>
+          <button class="close-btn" @click="showRegisterModal = false">×</button>
+        </div>
+        
+        <div class="register-content">
+          <div class="form-group">
+            <label>真实姓名</label>
+            <input type="text" v-model="registerForm.name" placeholder="请输入您的真实姓名">
+          </div>
+          <div class="form-group">
+            <label>手机号码</label>
+            <input type="tel" v-model="registerForm.phone" placeholder="请输入您的手机号码">
+          </div>
+          <div class="form-group">
+            <label>验证码</label>
+            <div style="display: flex; gap: 10px;">
+              <input type="text" v-model="registerForm.code" placeholder="请输入验证码" style="flex: 1;">
+              <button :disabled="regCountDown > 0" @click="getRegVerifyCode" style="height: 44px;">
+                {{ regCountDown > 0 ? `${regCountDown}秒后重新获取` : '获取验证码' }}
+              </button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>登录账号</label>
+            <input type="text" v-model="registerForm.username" placeholder="请设置登录账号">
+          </div>
+          <div class="form-group">
+            <label>登录密码</label>
+            <input type="password" v-model="registerForm.password" placeholder="请设置登录密码（不少于8位）">
+          </div>
+          <div class="form-group">
+            <label>确认密码</label>
+            <input type="password" v-model="registerForm.confirmPassword" placeholder="请再次输入密码">
+          </div>
+          
+          <button class="btn-block" @click="handleRegister">提交注册</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 结束会话弹窗 -->
+    <div class="modal-overlay" :class="{ active: showExitModal }" @click.self="showExitModal = false">
+      <div class="modal">
+        <div class="modal-header">
+          <div class="modal-title">结束当前会话</div>
+          <button class="close-btn" @click="showExitModal = false">×</button>
+        </div>
+        
+        <div style="margin: 20px 0;">
+          <p>请选择如何处理本次分析数据：</p>
+          
+          <div style="margin: 20px 0;">
+            <label style="display: block; margin-bottom: 15px;">
+              <input type="radio" name="exitOption" value="save" checked> 保存完整报告
+            </label>
+            <label style="display: block; margin-bottom: 15px;">
+              <input type="radio" name="exitOption" value="draft"> 保存为草稿
+            </label>
+            <label style="display: block;">
+              <input type="radio" name="exitOption" value="discard"> 放弃本次会话
+            </label>
+          </div>
+          
+          <div style="text-align: right;">
+            <button @click="showExitModal = false">取消</button>
+            <button @click="handleExit">确认</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 视频来源选择弹窗 -->
+    <div class="modal-overlay action-modal" id="sourceModal">
+      <div class="modal">
+        <div class="modal-header">
+          <div class="modal-title">选择视频来源</div>
+          <button class="close-btn" onclick="nativeHideSourceModal()">×</button>
+        </div>
+        
+        <div>
+          <p>请选择视频来源方式开始分析：</p>
+          
+          <div class="action-buttons">
+            <button onclick="nativeHandleUpload()">A. 上传视频</button>
+            <button onclick="nativeHandleCamera()">B. 开启摄像头</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 隐藏的文件选择器 -->
+    <input type="file" id="nativeFileInput" style="display: none" accept=".mp4,.avi,.mov,.mkv" onchange="nativeHandleFileSelected(event)">
+    <input type="file" id="generalFileInput" ref="generalFileInput" style="display: none" accept=".mp4,.avi,.pdf,.csv" multiple @change="handleGeneralFileSelected">
+  </div>
+
+  <script>
+    window.onload = function() {
+      setTimeout(() => {
+        document.getElementById('loader').style.opacity = 0;
+        setTimeout(() => {
+          document.getElementById('loader').style.display = 'none';
+          document.getElementById('app').classList.add('active');
+        }, 500);
+      }, 1000);
+    };
+
+    const app = new Vue({
+      el: '#app',
+      data() {
+        return {
+          currentView: 'auth',
+          showLoginModal: false,
+          showRegisterModal: false,
+          loginTab: 'password',
+          loginForm: { username: '', password: '' },
+          verifyForm: { phone: '', code: '' },
+          registerForm: {
+            name: '', phone: '', code: '', 
+            username: '', password: '', confirmPassword: ''
+          },
+          countDown: 0,
+          regCountDown: 0,
+          agreed: false,
+          isAgreementScrolledToBottom: false,
+          sessions: [
+            { name: '腹腔镜胆囊切除术', date: '2025-11-20 09:30', duration: '45分钟', warnings: 3 },
+            { name: '膝关节置换术', date: '2025-11-18 14:15', duration: '90分钟', warnings: 5 }
+          ],
+          currentSession: null,
+          showExitModal: false,
+          safetyLevel: 'green',
+          recognizedInstruments: ['手术刀', '止血钳', '缝合针'],
+          activeWarnings: [
+            { 
+              title: '器械未正确消毒', 
+              description: '检测到止血钳消毒时间不足，建议重新消毒', 
+              timestamp: '10:23:45', 
+              type: 'yellow' 
+            }
+          ],
+          screenshots: [],
+          eventList: [
+            { time: '10:15:30', type: '器械识别', details: '识别到手术刀', hasScreenshot: false },
+            { time: '10:23:45', type: '黄色预警', details: '止血钳消毒时间不足', hasScreenshot: true }
+          ],
+          isReady: false
+        };
+      },
+      computed: {
+        safetyText() {
+          switch(this.safetyLevel) {
+            case 'green': return '一切正常';
+            case 'yellow': return '注意：存在潜在风险';
+            case 'red': return '警告：存在严重安全隐患';
+            default: return '未知状态';
+          }
+        },
+        totalWarnings() {
+          return this.activeWarnings.length;
+        },
+        redWarningCount() {
+          return this.activeWarnings.filter(w => w.type === 'red').length;
+        },
+        yellowWarningCount() {
+          return this.activeWarnings.filter(w => w.type === 'yellow').length;
+        }
+      },
+      methods: {
+        // 登录相关方法（单独提取，确保事件绑定正确）
+        handlePasswordLogin() {
+          if (!this.loginForm.username || !this.loginForm.password) {
+            alert('请输入账号和密码');
+            return;
+          }
+          alert('登录成功');
+          this.showLoginModal = false;
+          this.currentView = 'welcome';
+        },
+        handleVerifyLogin() {
+          if (!this.verifyForm.phone || !this.verifyForm.code) {
+            alert('请输入手机号码和验证码');
+            return;
+          }
+          alert('登录成功');
+          this.showLoginModal = false;
+          this.currentView = 'welcome';
+        },
+        handleRegister() {
+          if (!this.registerForm.name || !this.registerForm.phone || !this.registerForm.code ||
+              !this.registerForm.username || !this.registerForm.password || !this.registerForm.confirmPassword) {
+            alert('请填写完整信息');
+            return;
+          }
+          if (this.registerForm.password !== this.registerForm.confirmPassword) {
+            alert('两次输入的密码不一致');
+            return;
+          }
+          if (this.registerForm.password.length < 8) {
+            alert('密码长度不少于8位');
+            return;
+          }
+          alert('注册成功，请登录');
+          this.showRegisterModal = false;
+          this.showLoginModal = true;
+        },
+
+        // 其他原有方法
+        checkAgreementScroll() {
+          const element = this.$refs.agreementRef;
+          this.isAgreementScrolledToBottom = 
+            Math.ceil(element.scrollTop + element.clientHeight) >= element.scrollHeight;
+        },
+        goToSessionManager() {
+          this.currentView = 'sessionManager';
+        },
+        openSession(index) {
+          this.currentSession = this.sessions[index];
+          this.currentView = 'analysisWorkspace';
+          // 重置视频状态
+          document.getElementById('nativeVideoPlayer').classList.remove('native-active');
+          document.getElementById('statusText').textContent = '点击此处选择视频来源';
+          document.getElementById('loadingIndicator').classList.remove('active');
+          document.getElementById('playText').textContent = '播放';
+          document.getElementById('stopBtn').disabled = true;
+          document.getElementById('recordBtn').disabled = true;
+          document.getElementById('screenshotBtn').disabled = true;
+          document.getElementById('screenshotCount').textContent = '0';
+          this.isReady = false;
+          this.screenshots = [];
+        },
+        triggerFileSelect(type) {
+          if (type === 'general') {
+            this.$refs.generalFileInput.click();
+          }
+        },
+        handleGeneralFileSelected(event) {
+          const files = event.target.files;
+          if (files.length > 0) {
+            alert(`已上传 ${files.length} 个文件`);
+          }
+        },
+        resolveWarning(index) {
+          this.activeWarnings.splice(index, 1);
+        },
+        goToReport() {
+          this.currentView = 'reviewReport';
+        },
+        handleExit() {
+          const exitOption = document.querySelector('input[name="exitOption"]:checked').value;
+          if (exitOption === 'save') alert('会话已保存为完整报告');
+          else if (exitOption === 'draft') alert('会话已保存为草稿');
+          else alert('已放弃本次会话');
+          this.showExitModal = false;
+          this.currentView = 'sessionManager';
+        },
+        exportPDF() {
+          alert('PDF导出功能已触发');
+        },
+        exportCSV() {
+          alert('CSV导出功能已触发');
+        },
+        printReport() {
+          window.print();
+        },
+        getVerifyCode() {
+          if (!this.verifyForm.phone) {
+            alert('请输入手机号码');
+            return;
+          }
+          this.countDown = 60;
+          const timer = setInterval(() => {
+            this.countDown--;
+            if (this.countDown <= 0) clearInterval(timer);
+          }, 1000);
+          alert('验证码已发送');
+        },
+        getRegVerifyCode() {
+          if (!this.registerForm.phone) {
+            alert('请输入手机号码');
+            return;
+          }
+          this.regCountDown = 60;
+          const timer = setInterval(() => {
+            this.regCountDown--;
+            if (this.regCountDown <= 0) clearInterval(timer);
+          }, 1000);
+          alert('验证码已发送');
+        }
+      }
+    });
+
+    // 暴露Vue实例到全局
+    window.vueApp = app;
+
+    // 原生视频控制逻辑
+    let isNativePlaying = false;
+    let isNativeRecording = false;
+    let nativeScreenshotCount = 0;
+    let mediaStream = null;
+
+    function nativeShowSourceModal() {
+      const modal = document.getElementById('sourceModal');
+      modal.classList.add('native-show');
+    }
+
+    function nativeHideSourceModal() {
+      const modal = document.getElementById('sourceModal');
+      modal.classList.remove('native-show');
+    }
+
+    function nativeHandleUpload() {
+      nativeHideSourceModal();
+      document.getElementById('loadingIndicator').classList.add('active');
+      document.getElementById('statusText').textContent = '正在加载视频...';
+      document.getElementById('nativeFileInput').click();
+    }
+
+    function nativeHandleCamera() {
+      nativeHideSourceModal();
+      document.getElementById('loadingIndicator').classList.add('active');
+      document.getElementById('statusText').textContent = '正在启动摄像头...';
+      document.getElementById('nativeVideoPlayer').classList.remove('native-active');
+
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          mediaStream = stream;
+          const video = document.getElementById('nativeVideoPlayer');
+          video.srcObject = stream;
+          video.load();
+          video.play().then(() => {
+            document.getElementById('loadingIndicator').classList.remove('active');
+            document.getElementById('nativeVideoPlayer').classList.add('native-active');
+            document.getElementById('statusText').textContent = '摄像头实时分析中';
+            isNativePlaying = true;
+            document.getElementById('playText').textContent = '暂停';
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('recordBtn').disabled = false;
+            document.getElementById('screenshotBtn').disabled = false;
+            window.vueApp.isReady = true;
+          }).catch(err => {
+            console.error('摄像头播放失败:', err);
+            document.getElementById('loadingIndicator').classList.remove('active');
+            document.getElementById('statusText').textContent = '摄像头播放失败，请重试';
+            alert('摄像头播放失败: ' + err.message);
+          });
+        })
+        .catch(err => {
+          console.error('摄像头访问失败:', err);
+          document.getElementById('loadingIndicator').classList.remove('active');
+          document.getElementById('statusText').textContent = '无法访问摄像头，请检查权限';
+          alert('无法访问摄像头: ' + err.message);
+        });
+    }
+
+    function nativeHandleFileSelected(event) {
+      const files = event.target.files;
+      if (!files || files.length === 0) {
+        document.getElementById('loadingIndicator').classList.remove('active');
+        document.getElementById('statusText').textContent = '未选择文件';
+        return;
+      }
+
+      const videoFile = files[0];
+      const validTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/mkv'];
+      if (!validTypes.includes(videoFile.type)) {
+        document.getElementById('loadingIndicator').classList.remove('active');
+        document.getElementById('statusText').textContent = '不支持的视频格式';
+        alert('不支持的视频格式，请上传MP4、AVI、MOV或MKV格式');
+        return;
+      }
+
+      const videoURL = URL.createObjectURL(videoFile);
+      const video = document.getElementById('nativeVideoPlayer');
+      if (video.srcObject) {
+        video.srcObject.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+      }
+      video.src = videoURL;
+      video.load();
+      video.play().then(() => {
+        document.getElementById('loadingIndicator').classList.remove('active');
+        document.getElementById('nativeVideoPlayer').classList.add('native-active');
+        document.getElementById('statusText').textContent = '正在分析：' + videoFile.name;
+        isNativePlaying = true;
+        document.getElementById('playText').textContent = '暂停';
+        document.getElementById('stopBtn').disabled = false;
+        document.getElementById('recordBtn').disabled = false;
+        document.getElementById('screenshotBtn').disabled = false;
+        window.vueApp.isReady = true;
+      }).catch(err => {
+        console.error('视频播放失败:', err);
+        document.getElementById('loadingIndicator').classList.remove('active');
+        document.getElementById('nativeVideoPlayer').classList.add('native-active');
+        document.getElementById('statusText').textContent = '视频已加载，请手动播放';
+        window.vueApp.isReady = true;
+        alert('视频自动播放失败，请点击播放按钮手动播放');
+      });
+    }
+
+    function nativeOnVideoLoaded() {
+      console.log('视频加载完成');
+    }
+
+    function nativeHandleVideoError() {
+      document.getElementById('loadingIndicator').classList.remove('active');
+      document.getElementById('nativeVideoPlayer').classList.remove('native-active');
+      document.getElementById('statusText').textContent = '视频加载失败，请重新上传';
+      alert('视频加载失败，请检查文件完整性');
+      window.vueApp.isReady = false;
+    }
+
+    function nativeTogglePlay() {
+      const video = document.getElementById('nativeVideoPlayer');
+      if (!video) return;
+
+      if (isNativePlaying) {
+        video.pause();
+        document.getElementById('playText').textContent = '播放';
+      } else {
+        video.play().catch(err => {
+          console.error('播放失败:', err);
+          alert('播放失败，请重试');
+          return;
+        });
+        document.getElementById('playText').textContent = '暂停';
+      }
+      isNativePlaying = !isNativePlaying;
+    }
+
+    function nativeStopPlay() {
+      const video = document.getElementById('nativeVideoPlayer');
+      if (!video) return;
+
+      video.pause();
+      video.currentTime = 0;
+      if (video.srcObject) {
+        video.srcObject.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+      }
+      isNativePlaying = false;
+      isNativeRecording = false;
+      document.getElementById('playText').textContent = '播放';
+      document.getElementById('recordText').textContent = '开始录制';
+      document.getElementById('stopBtn').disabled = true;
+      document.getElementById('recordBtn').disabled = true;
+      document.getElementById('screenshotBtn').disabled = true;
+      document.getElementById('nativeVideoPlayer').classList.remove('native-active');
+      document.getElementById('statusText').textContent = '点击此处选择视频来源';
+      window.vueApp.isReady = false;
+    }
+
+    function nativeToggleRecording() {
+      if (isNativeRecording) {
+        document.getElementById('recordText').textContent = '开始录制';
+        alert('录制已停止');
+      } else {
+        document.getElementById('recordText').textContent = '停止录制';
+        alert('录制已开始');
+      }
+      isNativeRecording = !isNativeRecording;
+    }
+
+    function nativeTakeScreenshot() {
+      nativeScreenshotCount++;
+      document.getElementById('screenshotCount').textContent = nativeScreenshotCount;
+      const now = new Date();
+      const timestamp = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+      window.vueApp.screenshots.push({ timestamp });
+      alert(`已截图，当前共 ${nativeScreenshotCount} 张`);
+    }
+
+
+
+    // 事件穿透防护
+    document.querySelector('.video-container').addEventListener('click', function(e) {
+      e.stopPropagation();
+    });
+
+    document.querySelectorAll('.close-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+      });
+    });
+
+    // 页面卸载时清理资源
+    window.addEventListener('beforeunload',function(){
+      if(mediaStream){
+        mediaStream.getTracks().forEach(track=>track.stop());
+      }
+      const video=document.getElementByld('nativaVideoPlayer');
+      if(video.srcObject){
+        video.srcObject=null;
+      }
+      if(video.src){
+        URL.revokeObjectURL(video.src);
+        video.src=' '
+      }
+    });
+    
+  </script>
+</body>
+</html>

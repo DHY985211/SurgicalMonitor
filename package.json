@@ -1,0 +1,73 @@
+{
+  "name": "surgical-monitor",
+  "version": "1.0.0",
+  "main": "main.js",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  },
+  "scripts": {
+    "start": "electron .",
+    "start:python": "cd Python_backend && D:\\Anaconda3\\envs\\cellpose_finally\\python.exe app.py",
+    "start:node": "cd main && node app.js",
+    "start:backend": "concurrently \"npm run start:python\" \"npm run start:node\"",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^39.2.4",
+    "electron-builder": "^26.0.12"
+  },
+  "keywords": [
+    "手术器械监测",
+    "Electron",
+    "Vue"
+  ],
+  "author": "",
+  "license": "ISC",
+  "description": "手术器械监测系统",
+  "build": {
+    "appId": "com.surgical.monitor",
+    "productName": "手术器械监测系统",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "frontend/**/*",
+      "Python_backend/**/*",
+      "main/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "frontend/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "手术器械监测系统"
+    },
+    "extraResources": [
+      {
+        "from": "Python_backend",
+        "to": "Python_backend"
+      },
+      {
+        "from": "main",
+        "to": "main"
+      }
+    ]
+  }
+}

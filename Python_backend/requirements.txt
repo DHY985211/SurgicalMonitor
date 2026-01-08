@@ -1,0 +1,10 @@
+flask==2.0.1
+flask-cors==3.0.10
+opencv-python==4.11.0.86
+numpy==1.26.0
+torch==2.0.0
+scipy==1.13.1
+scikit-learn==1.5.1
+matplotlib==3.9.4
+tqdm==4.67.1
+pillow==10.1.0
