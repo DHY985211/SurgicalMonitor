@@ -1,0 +1,25 @@
+# 依赖目录
+node_modules/
+npm
+surgical-monitor@1.0.0
+
+# 构建输出
+dist/
+build/
+
+# 大型媒体文件 (必须！)
+*.mp4
+*.avi
+*.mov
+*.mkv
+surgical_instruments*.mp4
+surgical_instruments*.avi
+surgical_instruments*.mov
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 日志与环境变量
+*.log
+.env
